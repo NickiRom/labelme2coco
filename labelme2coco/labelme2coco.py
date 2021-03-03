@@ -129,8 +129,14 @@ class labelme2coco(object):
     def polygons_to_mask(self, img_shape, polygons):
         mask = np.zeros(img_shape, dtype=np.uint8)
         mask = PIL.Image.fromarray(mask)
-        xy = list(map(tuple, polygons))
-        PIL.ImageDraw.Draw(mask).polygon(xy=xy, outline=1, fill=1)
+        # xy = list(map(tuple, polygons))
+        center, edge = np.asarray(polygons)
+        radius = np.sqrt(np.sum((edge - center)**2))
+        corner1 = center - radius
+        corner2 = center + radius
+        xy = [(corner1[0], corner1[1]), (corner2[0], corner2[1])]
+        # PIL.ImageDraw.Draw(mask).polygon(xy=xy, outline=1, fill=1)
+        PIL.ImageDraw.Draw(mask).ellipse(xy=xy, outline=1, fill=1)
         mask = np.array(mask, dtype=bool)
         return mask
 
