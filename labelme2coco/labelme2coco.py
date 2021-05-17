@@ -47,7 +47,8 @@ class labelme2coco(object):
                         self.categories.append(self.category(label))
                         self.label.append(label)
                     points = shapes['points']
-                    self.annotations.append(self.annotation(points, label, num))
+                    shape_type = shapes['shape_type']
+                    self.annotations.append(self.annotation(points, shape_type, label, num))
                     self.annID += 1
 
     def image(self, data, num, json_path):
@@ -76,12 +77,12 @@ class labelme2coco(object):
 
         return category
 
-    def annotation(self, points, label, num):
+    def annotation(self, points, shape_type, label, num):
         annotation = {}
         annotation['iscrowd'] = 0
         annotation['image_id'] = int(num + 1)
 
-        annotation['bbox'] = list(map(float, self.getbbox(points)))
+        annotation['bbox'] = list(map(float, self.getbbox(points, shape_type)))
 
         # coarsely from bbox to segmentation
         x = annotation['bbox'][0]
@@ -104,12 +105,12 @@ class labelme2coco(object):
             #     return categorie['id']
         return -1
 
-    def getbbox(self,points):
+    def getbbox(self,points, shape_type):
         # img = np.zeros([self.height,self.width],np.uint8)
         # cv2.polylines(img, [np.asarray(points)], True, 1, lineType=cv2.LINE_AA)
         # cv2.fillPoly(img, [np.asarray(points)], 1)
         polygons = points
-        mask = self.polygons_to_mask([self.height, self.width], polygons)
+        mask = self.polygons_to_mask([self.height, self.width], polygons, shape_type)
         return self.mask2box(mask)
 
     def mask2box(self, mask):
@@ -126,17 +127,20 @@ class labelme2coco(object):
 
         return [left_top_c, left_top_r, right_bottom_c-left_top_c, right_bottom_r-left_top_r]  # [x1,y1,w,h] for coco box format
 
-    def polygons_to_mask(self, img_shape, polygons):
+    def polygons_to_mask(self, img_shape, polygons, shape_type):
         mask = np.zeros(img_shape, dtype=np.uint8)
         mask = PIL.Image.fromarray(mask)
-        # xy = list(map(tuple, polygons))
-        center, edge = np.asarray(polygons)
-        radius = np.sqrt(np.sum((edge - center)**2))
-        corner1 = center - radius
-        corner2 = center + radius
-        xy = [(corner1[0], corner1[1]), (corner2[0], corner2[1])]
-        # PIL.ImageDraw.Draw(mask).polygon(xy=xy, outline=1, fill=1)
-        PIL.ImageDraw.Draw(mask).ellipse(xy=xy, outline=1, fill=1)
+
+        if shape_type == 'polygon':
+            xy = list(map(tuple, polygons))
+            PIL.ImageDraw.Draw(mask).polygon(xy=xy, outline=1, fill=1)
+        elif shape_type == 'circle':
+            center, edge = np.asarray(polygons)
+            radius = np.sqrt(np.sum((edge - center)**2))
+            corner1 = center - radius
+            corner2 = center + radius
+            xy = [(corner1[0], corner1[1]), (corner2[0], corner2[1])]
+            PIL.ImageDraw.Draw(mask).ellipse(xy=xy, outline=1, fill=1)
         mask = np.array(mask, dtype=bool)
         return mask
 
