@@ -84,6 +84,8 @@ class labelme2coco(object):
 
         annotation['bbox'] = list(map(float, self.getbbox(points, shape_type)))
 
+        annotation['shape_type'] = shape_type
+
         # coarsely from bbox to segmentation
         x = annotation['bbox'][0]
         y = annotation['bbox'][1]
